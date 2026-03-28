@@ -36,27 +36,38 @@ def create():
 
     return f'''
     <h3>Share this link:</h3>
-    <a href="/msg/{uid}">http://127.0.0.1:5000/msg/{uid}</a>
-    <p>This message can be opened only once.</p>
+    <a href="/msg/{uid}">https://one-time-message-3.onrender.com/msg/{uid}</a>
+    <p>This message will delete after viewing.</p>
     '''
 
-# view message (only once)
-@app.route('/msg/<id>')
+# view message (FIXED VERSION)
+@app.route('/msg/<id>', methods=['GET', 'POST'])
 def view(id):
     conn = sqlite3.connect('messages.db')
     c = conn.cursor()
     c.execute('SELECT content FROM messages WHERE id=?', (id,))
     data = c.fetchone()
 
-    if data:
-        msg = data[0]
-        c.execute('DELETE FROM messages WHERE id=?', (id,))
-        conn.commit()
-        conn.close()
-        return f"<h1>{msg}</h1>"
-    else:
+    if not data:
         return "<h1>Message expired or already opened</h1>"
+
+    msg = data[0]
+
+    # Step 1: show button (prevents auto-delete)
+    if request.method == 'GET':
+        return '''
+        <h3>Click below to view the secret message</h3>
+        <form method="post">
+            <button type="submit">View Message</button>
+        </form>
+        '''
+
+    # Step 2: show + delete message
+    c.execute('DELETE FROM messages WHERE id=?', (id,))
+    conn.commit()
+    conn.close()
+
+    return f"<h1>{msg}</h1>"
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
